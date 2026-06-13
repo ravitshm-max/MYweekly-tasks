@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול משימות שבועי</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --primary: #5b6cf2;
+    --primary-dark: #4452c4;
+    --text: #2c2e3a;
+    --muted: #8a8d99;
+    --border: #e3e5ec;
+    --success: #3fb87f;
+    --danger: #e85c5c;
+    --warn: #f5a623;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    direction: rtl;
+    padding-bottom: 40px;
+  }
+  header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    padding: 24px 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  header h1 { margin: 0; font-size: 1.6rem; }
+  header p { margin: 6px 0 0; opacity: 0.9; font-size: 0.9rem; }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  .banner {
+    background: #fff7e6;
+    border: 1px solid var(--warn);
+    color: #8a5a00;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .banner button {
+    background: var(--warn);
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card h2 {
+    margin-top: 0;
+    font-size: 1.15rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  /* Draw section */
+  .draw-controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+  .field label { font-size: 0.85rem; color: var(--muted); }
+  select, input[type=text], input[type=number] {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #fff;
+    color: var(--text);
+  }
+  .btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: bold;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--primary-dark); }
+  .btn.secondary {
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+  }
+  .btn.secondary:hover { background: #eef0ff; }
+  .btn.small { padding: 4px 10px; font-size: 0.8rem; }
+  .btn.danger { background: var(--danger); }
+  .btn.danger:hover { background: #cc4a4a; }
+
+  /* Dashboard */
+  .today-list { list-style: none; padding: 0; margin: 14px 0 0; }
+  .today-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    background: #fafbff;
+  }
+  .today-list li.done { opacity: 0.55; text-decoration: line-through; background: #f0fff4; }
+  .today-list .domain-tag {
+    font-size: 0.75rem;
+    background: var(--primary);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+  .today-list .pts {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-right: auto;
+  }
+  .empty-msg { color: var(--muted); font-size: 0.9rem; padding: 8px 0; }
+
+  /* Domains */
+  .domain-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .domain-tab {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+  .domain-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .domain-tab .count {
+    background: rgba(0,0,0,0.08);
+    border-radius: 10px;
+    padding: 1px 6px;
+    margin-right: 6px;
+    font-size: 0.75rem;
+  }
+  .domain-tab.active .count { background: rgba(255,255,255,0.25); }
+
+  .add-task-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .add-task-form .field.grow { flex: 1; min-width: 200px; }
+
+  .task-list { list-style: none; padding: 0; margin: 0; }
+  .task-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+  .task-list li.done { opacity: 0.5; text-decoration: line-through; }
+  .task-list .meta {
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    margin-right: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .badge {
+    border-radius: 10px;
+    padding: 2px 8px;
+    background: #eef0ff;
+    color: var(--primary-dark);
+    white-space: nowrap;
+  }
+  .task-text { flex: 1; }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-top: 10px;
+  }
+
+  @media (max-width: 480px) {
+    .field { min-width: 100%; }
+    .add-task-form .field.grow { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 ניהול משימות שבועי</h1>
+  <p>תכנון, הגרלה וביצוע משימות בתחומי החיים שלך</p>
+</header>
+
+<div class="container">
+
+  <!-- Daily reminder banner -->
+  <div id="reminderBanner" class="banner" style="display:none;">
+    <span id="reminderText"></span>
+    <div style="display:flex; gap:8px;">
+      <button onclick="dismissReminder()">הבנתי, תודה</button>
+    </div>
+  </div>
+
+  <!-- Draw section -->
+  <div class="card">
+    <h2>🎲 הגרלת משימות להיום</h2>
+    <div class="draw-controls">
+      <div class="field">
+        <label for="energySelect">רמת אנרגיה</label>
+        <select id="energySelect">
+          <option value="3">גבוהה</option>
+          <option value="2" selected>בינונית</option>
+          <option value="1">נמוכה</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="timeSelect">זמן פנוי</label>
+        <select id="timeSelect">
+          <option value="3">כמה שעות</option>
+          <option value="2" selected>שעה</option>
+          <option value="1">15 דקות</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="countSelect">מספר משימות</label>
+        <select id="countSelect">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <button class="btn" onclick="drawTasks()">הגרל משימות</button>
+      <button class="btn secondary" onclick="clearDraw()">נקה הגרלה</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="card">
+    <h2>✅ המשימות שהוגרלו להיום</h2>
+    <div id="todayDate" style="color:var(--muted); font-size:0.85rem; margin-bottom:6px;"></div>
+    <ul id="todayList" class="today-list"></ul>
+    <div id="todayEmpty" class="empty-msg">עדיין לא הוגרלו משימות להיום. בחרי אנרגיה וזמן ולחצי "הגרל משימות".</div>
+  </div>
+
+  <!-- Domains management -->
+  <div class="card">
+    <h2>🗂️ תחומי חיים ומשימות</h2>
+    <div id="domainTabs" class="domain-tabs"></div>
+
+    <div class="add-task-form">
+      <div class="field grow">
+        <label for="taskText">משימה חדשה</label>
+        <input type="text" id="taskText" placeholder="לדוגמה: לתאם פגישה עם...">
+      </div>
+      <div class="field">
+        <label for="taskPoints">חשיבות (1-5)</label>
+        <select id="taskPoints">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="taskEnergy">אנרגיה נדרשת</label>
+        <select id="taskEnergy">
+          <option value="3">גבוהה</option>
+          <option value="2" selected>בינונית</option>
+          <option value="1">נמוכה</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="taskTime">זמן נדרש</label>
+        <select id="taskTime">
+          <option value="3">כמה שעות</option>
+          <option value="2" selected>שעה</option>
+          <option value="1">15 דקות</option>
+        </select>
+      </div>
+      <button class="btn" onclick="addTask()">הוסף משימה</button>
+    </div>
+
+    <ul id="taskList" class="task-list"></ul>
+  </div>
+
+  <footer>הנתונים נשמרים בדפדפן שלך בלבד (localStorage) — לא נשלח מידע לשום שרת.</footer>
+</div>
+
+<script>
+const DOMAINS = ["קריירה", "דור", "אריאל", "יובל", "זוגיות", "משפחה", "אישי", "לימוד והתפתחות"];
+const ENERGY_LABELS = { "1": "נמוכה", "2": "בינונית", "3": "גבוהה" };
+const TIME_LABELS = { "1": "15 דק׳", "2": "שעה", "3": "כמה שעות" };
+
+const STORAGE_KEY = "weeklyTasksApp";
+
+let state = loadState();
+let activeDomain = DOMAINS[0];
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      // ensure all domains exist
+      DOMAINS.forEach(d => { if (!parsed.tasks[d]) parsed.tasks[d] = []; });
+      return parsed;
+    } catch (e) {}
+  }
+  const tasks = {};
+  DOMAINS.forEach(d => tasks[d] = []);
+  return {
+    tasks: tasks,
+    todayDraw: { date: null, items: [] },
+    lastReminderDate: null
+  };
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function uid() {
+  return 't' + Date.now() + '_' + Math.floor(Math.random()*100000);
+}
+
+/* ---------- Reminder ---------- */
+function checkReminder() {
+  const today = todayStr();
+  if (state.lastReminderDate === today) return;
+  const emptyDomains = DOMAINS.filter(d => state.tasks[d].length === 0);
+  if (emptyDomains.length > 0) {
+    document.getElementById('reminderBanner').style.display = 'flex';
+    document.getElementById('reminderText').textContent =
+      "תזכורת: התחומים הבאים ריקים ממשימות — " + emptyDomains.join(", ") + ". כדאי להוסיף להם משימות 🙂";
+  }
+}
+function dismissReminder() {
+  state.lastReminderDate = todayStr();
+  saveState();
+  document.getElementById('reminderBanner').style.display = 'none';
+}
+
+/* ---------- Domain Tabs ---------- */
+function renderDomainTabs() {
+  const wrap = document.getElementById('domainTabs');
+  wrap.innerHTML = '';
+  DOMAINS.forEach(d => {
+    const tab = document.createElement('div');
+    tab.className = 'domain-tab' + (d === activeDomain ? ' active' : '');
+    tab.innerHTML = `${d} <span class="count">${state.tasks[d].length}</span>`;
+    tab.onclick = () => { activeDomain = d; renderAll(); };
+    wrap.appendChild(tab);
+  });
+}
+
+/* ---------- Task management ---------- */
+function addTask() {
+  const text = document.getElementById('taskText').value.trim();
+  if (!text) { alert('כתבי תיאור למשימה'); return; }
+  const points = parseInt(document.getElementById('taskPoints').value, 10);
+  const energy = document.getElementById('taskEnergy').value;
+  const time = document.getElementById('taskTime').value;
+
+  state.tasks[activeDomain].push({
+    id: uid(),
+    text: text,
+    points: points,
+    energy: energy,
+    time: time,
+    done: false
+  });
+  document.getElementById('taskText').value = '';
+  saveState();
+  renderAll();
+}
+
+function deleteTask(domain, id) {
+  state.tasks[domain] = state.tasks[domain].filter(t => t.id !== id);
+  // also remove from today's draw if present
+  state.todayDraw.items = state.todayDraw.items.filter(it => !(it.domain === domain && it.id === id));
+  saveState();
+  renderAll();
+}
+
+function toggleTaskDone(domain, id) {
+  const task = state.tasks[domain].find(t => t.id === id);
+  if (task) task.done = !task.done;
+  saveState();
+  renderAll();
+}
+
+function renderTaskList() {
+  const list = document.getElementById('taskList');
+  list.innerHTML = '';
+  const tasks = state.tasks[activeDomain];
+  if (tasks.length === 0) {
+    list.innerHTML = '<div class="empty-msg">אין משימות בתחום הזה עדיין. הוסיפי משימה חדשה למעלה.</div>';
+    return;
+  }
+  tasks.forEach(t => {
+    const li = document.createElement('li');
+    if (t.done) li.classList.add('done');
+    li.innerHTML = `
+      <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTaskDone('${activeDomain}','${t.id}')">
+      <span class="task-text">${escapeHtml(t.text)}</span>
+      <span class="meta">
+        <span class="badge">⭐ ${t.points}</span>
+        <span class="badge">⚡ ${ENERGY_LABELS[t.energy]}</span>
+        <span class="badge">⏱ ${TIME_LABELS[t.time]}</span>
+      </span>
+      <button class="btn danger small" onclick="deleteTask('${activeDomain}','${t.id}')">מחק</button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+/* ---------- Draw logic ---------- */
+function drawTasks() {
+  const selEnergy = parseInt(document.getElementById('energySelect').value, 10);
+  const selTime = parseInt(document.getElementById('timeSelect').value, 10);
+  const count = parseInt(document.getElementById('countSelect').value, 10);
+
+  // collect candidate tasks (not done) that fit the energy/time budget
+  let candidates = [];
+  DOMAINS.forEach(domain => {
+    state.tasks[domain].forEach(t => {
+      if (t.done) return;
+      if (parseInt(t.energy,10) <= selEnergy && parseInt(t.time,10) <= selTime) {
+        candidates.push({ domain, id: t.id, points: t.points });
+      }
+    });
+  });
+
+  if (candidates.length === 0) {
+    alert('לא נמצאו משימות שמתאימות לרמת האנרגיה והזמן שנבחרו. נסי לבחור פרמטרים אחרים או הוסיפי משימות.');
+    return;
+  }
+
+  // weighted random shuffle: higher points -> more likely to be picked first
+  candidates.forEach(c => {
+    c._key = Math.pow(Math.random(), 1 / c.points);
+  });
+  candidates.sort((a,b) => b._key - a._key);
+
+  // try to pick from distinct domains first, then fill remaining slots
+  const picked = [];
+  const usedDomains = new Set();
+  for (const c of candidates) {
+    if (picked.length >= count) break;
+    if (!usedDomains.has(c.domain)) {
+      picked.push(c);
+      usedDomains.add(c.domain);
+    }
+  }
+  if (picked.length < count) {
+    for (const c of candidates) {
+      if (picked.length >= count) break;
+      if (!picked.includes(c)) picked.push(c);
+    }
+  }
+
+  state.todayDraw = {
+    date: todayStr(),
+    items: picked.map(p => ({ domain: p.domain, id: p.id }))
+  };
+  saveState();
+  renderAll();
+}
+
+function clearDraw() {
+  if (!confirm('לנקות את ההגרלה של היום?')) return;
+  state.todayDraw = { date: todayStr(), items: [] };
+  saveState();
+  renderAll();
+}
+
+function renderTodayList() {
+  const list = document.getElementById('todayList');
+  const emptyMsg = document.getElementById('todayEmpty');
+  document.getElementById('todayDate').textContent = 'תאריך: ' + new Date().toLocaleDateString('he-IL');
+  list.innerHTML = '';
+
+  const today = todayStr();
+  if (state.todayDraw.date !== today || state.todayDraw.items.length === 0) {
+    emptyMsg.style.display = 'block';
+    return;
+  }
+  emptyMsg.style.display = 'none';
+
+  state.todayDraw.items.forEach(item => {
+    const task = state.tasks[item.domain] && state.tasks[item.domain].find(t => t.id === item.id);
+    if (!task) return;
+    const li = document.createElement('li');
+    if (task.done) li.classList.add('done');
+    li.innerHTML = `
+      <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTaskDone('${item.domain}','${task.id}')">
+      <span class="domain-tag">${item.domain}</span>
+      <span class="task-text">${escapeHtml(task.text)}</span>
+      <span class="pts">⭐ ${task.points} | ⚡ ${ENERGY_LABELS[task.energy]} | ⏱ ${TIME_LABELS[task.time]}</span>
+    `;
+    list.appendChild(li);
+  });
+
+  if (list.children.length === 0) {
+    emptyMsg.style.display = 'block';
+    emptyMsg.textContent = 'המשימות שהוגרלו נמחקו. בצעי הגרלה חדשה.';
+  }
+}
+
+/* ---------- Utils ---------- */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ---------- Render All ---------- */
+function renderAll() {
+  renderDomainTabs();
+  renderTaskList();
+  renderTodayList();
+}
+
+checkReminder();
+renderAll();
+</script>
+
+</body>
+</html>
