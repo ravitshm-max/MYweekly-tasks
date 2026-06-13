@@ -339,7 +339,10 @@
 
   <!-- Domains management -->
   <div class="card">
-    <h2>🗂️ תחומי חיים ומשימות</h2>
+    <h2 style="display:flex; align-items:center; justify-content:space-between;">
+      <span>🗂️ תחומי חיים ומשימות</span>
+      <button class="btn small" style="border-radius:50%; width:32px; height:32px; padding:0; font-size:1.1rem; line-height:1;" onclick="addDomain()" title="הוסף תחום חיים">+</button>
+    </h2>
     <div id="domainTabs" class="domain-tabs"></div>
 
     <div class="add-task-form">
@@ -386,28 +389,32 @@
 <canvas id="confettiCanvas"></canvas>
 
 <script>
-const DOMAINS = ["קריירה", "דור", "אריאל", "יובל", "זוגיות", "משפחה", "אישי", "לימוד והתפתחות"];
+const DEFAULT_DOMAINS = ["קריירה", "דור", "אריאל", "יובל", "זוגיות", "משפחה", "אישי", "לימוד והתפתחות"];
 const ENERGY_LABELS = { "1": "נמוכה", "2": "בינונית", "3": "גבוהה" };
 const TIME_LABELS = { "1": "15 דק׳", "2": "שעה", "3": "כמה שעות" };
 
 const STORAGE_KEY = "weeklyTasksApp";
 
 let state = loadState();
-let activeDomain = DOMAINS[0];
+let activeDomain = state.domains[0];
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      // ensure all domains exist
-      DOMAINS.forEach(d => { if (!parsed.tasks[d]) parsed.tasks[d] = []; });
+      // ensure domains list exists
+      if (!parsed.domains) parsed.domains = DEFAULT_DOMAINS.slice();
+      // ensure all domains have a task list
+      parsed.domains.forEach(d => { if (!parsed.tasks[d]) parsed.tasks[d] = []; });
       return parsed;
     } catch (e) {}
   }
+  const domains = DEFAULT_DOMAINS.slice();
   const tasks = {};
-  DOMAINS.forEach(d => tasks[d] = []);
+  domains.forEach(d => tasks[d] = []);
   return {
+    domains: domains,
     tasks: tasks,
     todayDraw: { date: null, items: [] },
     lastReminderDate: null
@@ -431,7 +438,7 @@ function uid() {
 function checkReminder() {
   const today = todayStr();
   if (state.lastReminderDate === today) return;
-  const emptyDomains = DOMAINS.filter(d => state.tasks[d].length === 0);
+  const emptyDomains = state.domains.filter(d => state.tasks[d].length === 0);
   if (emptyDomains.length > 0) {
     document.getElementById('reminderBanner').style.display = 'flex';
     document.getElementById('reminderText').textContent =
@@ -448,13 +455,29 @@ function dismissReminder() {
 function renderDomainTabs() {
   const wrap = document.getElementById('domainTabs');
   wrap.innerHTML = '';
-  DOMAINS.forEach(d => {
+  state.domains.forEach(d => {
     const tab = document.createElement('div');
     tab.className = 'domain-tab' + (d === activeDomain ? ' active' : '');
     tab.innerHTML = `${d} <span class="count">${state.tasks[d].length}</span>`;
     tab.onclick = () => { activeDomain = d; renderAll(); };
     wrap.appendChild(tab);
   });
+}
+
+function addDomain() {
+  const name = prompt('שם התחום החדש:');
+  if (!name) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  if (state.domains.includes(trimmed)) {
+    alert('התחום הזה כבר קיים');
+    return;
+  }
+  state.domains.push(trimmed);
+  state.tasks[trimmed] = [];
+  activeDomain = trimmed;
+  saveState();
+  renderAll();
 }
 
 /* ---------- Task management ---------- */
@@ -533,7 +556,7 @@ function drawTasks() {
 
   // collect candidate tasks (not done) that fit the energy/time budget
   let candidates = [];
-  DOMAINS.forEach(domain => {
+  state.domains.forEach(domain => {
     state.tasks[domain].forEach(t => {
       if (t.done) return;
       if (parseInt(t.energy,10) <= selEnergy && parseInt(t.time,10) <= selTime) {
@@ -636,7 +659,7 @@ function renderWeekBar() {
 
   // sum points per date from all done tasks
   const pointsByDate = {};
-  DOMAINS.forEach(domain => {
+  state.domains.forEach(domain => {
     state.tasks[domain].forEach(t => {
       if (t.done && t.completedDate) {
         pointsByDate[t.completedDate] = (pointsByDate[t.completedDate] || 0) + t.points;
