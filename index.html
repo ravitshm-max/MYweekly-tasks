@@ -8,14 +8,13 @@
   :root {
     --bg: #f4f5f7;
     --card: #ffffff;
-    --primary: #5b6cf2;
-    --primary-dark: #4452c4;
+    --primary: #0e7490;
+    --primary-dark: #0c5870;
+    --primary-light: #7dd3e8;
     --text: #2c2e3a;
     --muted: #8a8d99;
     --border: #e3e5ec;
-    --success: #3fb87f;
-    --danger: #e85c5c;
-    --warn: #f5a623;
+    --warn: #0e7490;
   }
   * { box-sizing: border-box; }
   body {
@@ -24,7 +23,7 @@
     background: var(--bg);
     color: var(--text);
     direction: rtl;
-    padding-bottom: 40px;
+    padding-bottom: 100px;
   }
   header {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -43,9 +42,9 @@
   }
 
   .banner {
-    background: #fff7e6;
-    border: 1px solid var(--warn);
-    color: #8a5a00;
+    background: #e6f7fb;
+    border: 1px solid var(--primary-light);
+    color: var(--primary-dark);
     padding: 12px 16px;
     border-radius: 10px;
     margin-bottom: 16px;
@@ -56,7 +55,7 @@
     flex-wrap: wrap;
   }
   .banner button {
-    background: var(--warn);
+    background: var(--primary);
     border: none;
     color: #fff;
     padding: 6px 12px;
@@ -109,14 +108,14 @@
   }
   .btn:hover { background: var(--primary-dark); }
   .btn.secondary {
-    background: #fff;
-    color: var(--primary);
-    border: 1px solid var(--primary);
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    border: 1px solid var(--primary-light);
   }
-  .btn.secondary:hover { background: #eef0ff; }
+  .btn.secondary:hover { background: #b9eaf5; }
   .btn.small { padding: 4px 10px; font-size: 0.8rem; }
-  .btn.danger { background: var(--danger); }
-  .btn.danger:hover { background: #cc4a4a; }
+  .btn.danger { background: var(--primary-light); color: var(--primary-dark); }
+  .btn.danger:hover { background: #b9eaf5; }
 
   /* Dashboard */
   .today-list { list-style: none; padding: 0; margin: 14px 0 0; }
@@ -130,7 +129,7 @@
     margin-bottom: 8px;
     background: #fafbff;
   }
-  .today-list li.done { opacity: 0.55; text-decoration: line-through; background: #f0fff4; }
+  .today-list li.done { opacity: 0.55; text-decoration: line-through; background: #e6f7fb; }
   .today-list .domain-tag {
     font-size: 0.75rem;
     background: var(--primary);
@@ -210,7 +209,7 @@
   .badge {
     border-radius: 10px;
     padding: 2px 8px;
-    background: #eef0ff;
+    background: #e6f7fb;
     color: var(--primary-dark);
     white-space: nowrap;
   }
@@ -223,9 +222,58 @@
     margin-top: 10px;
   }
 
+  /* Week bar */
+  .week-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 4px;
+    z-index: 50;
+  }
+  .week-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    padding: 4px 2px;
+    border-radius: 8px;
+  }
+  .week-day.today { background: #e6f7fb; }
+  .week-day .day-name { font-size: 0.75rem; font-weight: bold; color: var(--text); }
+  .week-day .day-date { font-size: 0.65rem; color: var(--muted); }
+  .week-day .day-points {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--primary-dark);
+    background: var(--primary-light);
+    border-radius: 10px;
+    padding: 1px 8px;
+    margin-top: 2px;
+  }
+
+  #confettiCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
   @media (max-width: 480px) {
     .field { min-width: 100%; }
     .add-task-form .field.grow { min-width: 100%; }
+    .week-day .day-name { font-size: 0.65rem; }
+    .week-day .day-date { font-size: 0.55rem; }
+    .week-day .day-points { font-size: 0.7rem; padding: 1px 5px; }
   }
 </style>
 </head>
@@ -334,6 +382,9 @@
   <footer>הנתונים נשמרים בדפדפן שלך בלבד (localStorage) — לא נשלח מידע לשום שרת.</footer>
 </div>
 
+<div id="weekBar" class="week-bar"></div>
+<canvas id="confettiCanvas"></canvas>
+
 <script>
 const DOMAINS = ["קריירה", "דור", "אריאל", "יובל", "זוגיות", "משפחה", "אישי", "לימוד והתפתחות"];
 const ENERGY_LABELS = { "1": "נמוכה", "2": "בינונית", "3": "גבוהה" };
@@ -437,7 +488,14 @@ function deleteTask(domain, id) {
 
 function toggleTaskDone(domain, id) {
   const task = state.tasks[domain].find(t => t.id === id);
-  if (task) task.done = !task.done;
+  if (!task) return;
+  task.done = !task.done;
+  if (task.done) {
+    task.completedDate = todayStr();
+    launchConfetti();
+  } else {
+    delete task.completedDate;
+  }
   saveState();
   renderAll();
 }
@@ -560,6 +618,97 @@ function renderTodayList() {
   }
 }
 
+/* ---------- Week bar ---------- */
+const DAY_NAMES = ["יום א'", "יום ב'", "יום ג'", "יום ד'", "יום ה'", "יום ו'", "שבת"];
+
+function dateToStr(d) {
+  return d.toISOString().slice(0,10);
+}
+
+function renderWeekBar() {
+  const bar = document.getElementById('weekBar');
+  bar.innerHTML = '';
+
+  const now = new Date();
+  const todayKey = todayStr();
+  const start = new Date(now);
+  start.setDate(now.getDate() - now.getDay()); // Sunday of current week
+
+  // sum points per date from all done tasks
+  const pointsByDate = {};
+  DOMAINS.forEach(domain => {
+    state.tasks[domain].forEach(t => {
+      if (t.done && t.completedDate) {
+        pointsByDate[t.completedDate] = (pointsByDate[t.completedDate] || 0) + t.points;
+      }
+    });
+  });
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const key = dateToStr(d);
+    const points = pointsByDate[key] || 0;
+
+    const cell = document.createElement('div');
+    cell.className = 'week-day' + (key === todayKey ? ' today' : '');
+    cell.innerHTML = `
+      <span class="day-name">${DAY_NAMES[i]}</span>
+      <span class="day-date">${d.getDate()}/${d.getMonth()+1}</span>
+      <span class="day-points">${points}</span>
+    `;
+    bar.appendChild(cell);
+  }
+}
+
+/* ---------- Confetti ---------- */
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const colors = ['#0e7490', '#7dd3e8', '#67e8f9', '#0c5870'];
+  const particles = [];
+  const count = 80;
+
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: -20 - Math.random() * canvas.height * 0.3,
+      size: 5 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      speedY: 2 + Math.random() * 4,
+      speedX: -2 + Math.random() * 4,
+      rotation: Math.random() * 360,
+      rotationSpeed: -8 + Math.random() * 16
+    });
+  }
+
+  const duration = 1500;
+  const startTime = Date.now();
+
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      p.rotation += p.rotationSpeed;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.6);
+      ctx.restore();
+    });
+    if (Date.now() - startTime < duration) {
+      requestAnimationFrame(frame);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+  frame();
+}
+
 /* ---------- Utils ---------- */
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -572,6 +721,7 @@ function renderAll() {
   renderDomainTabs();
   renderTaskList();
   renderTodayList();
+  renderWeekBar();
 }
 
 checkReminder();
